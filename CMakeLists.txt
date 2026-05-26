@@ -106,6 +106,22 @@ if(NOT WITHOUT_GIT)
 endif()
 
 find_package(Threads REQUIRED)
+
+#==================================================================================
+# Force Local MariaDB Installation (D:\MangosCata\mariadb-10.6.3-winx64)
+#==================================================================================
+set(MARIADB_ROOT "D:/MangosCata/mariadb-10.6.3-winx64")
+set(MYSQL_INCLUDE_DIR "${MARIADB_ROOT}/include/mysql" CACHE PATH "MariaDB Include" FORCE)
+
+# MariaDB 10.6 can have different .lib names depending on the exact package
+if(EXISTS "${MARIADB_ROOT}/lib/libmariadb.lib")
+    set(MYSQL_LIBRARY "${MARIADB_ROOT}/lib/libmariadb.lib" CACHE FILEPATH "MariaDB Library" FORCE)
+elseif(EXISTS "${MARIADB_ROOT}/lib/libmysql.lib")
+    set(MYSQL_LIBRARY "${MARIADB_ROOT}/lib/libmysql.lib" CACHE FILEPATH "MariaDB Library" FORCE)
+elseif(EXISTS "${MARIADB_ROOT}/lib/mariadbclient.lib")
+    set(MYSQL_LIBRARY "${MARIADB_ROOT}/lib/mariadbclient.lib" CACHE FILEPATH "MariaDB Library" FORCE)
+endif()
+
 find_package(MySQL   REQUIRED)
 find_package(DL      REQUIRED)
 
@@ -126,5 +142,49 @@ endif()
 
 add_subdirectory(dep)
 add_subdirectory(src)
+
+#==================================================================================
+# Windows Platform Dependencies (Fixes MariaDB/SSL/Zlib linker errors)
+# DO NOT REMOVE - Required for successful linking on Windows
+#==================================================================================
+if(WIN32)
+    # Link required Windows libraries to mangosd and realmd targets
+    if(TARGET mangosd)
+        target_link_libraries(mangosd PRIVATE
+            shlwapi     # PathRemoveFileSpecA
+            secur32     # EncryptMessage, DecryptMessage, InitializeSecurityContextA, etc.
+            crypt32     # Cert*, Crypt* functions
+            ws2_32      # Network socket fallbacks
+            zlib        # compress/uncompress
+        )
+    endif()
+    
+    if(TARGET realmd)
+        target_link_libraries(realmd PRIVATE
+            shlwapi
+            secur32
+            crypt32
+            ws2_32
+            zlib
+        )
+    endif()
+
+    #==================================================================================
+    # Auto-copy MariaDB DLL to the install folder
+    #==================================================================================
+    set(MARIADB_DLL "")
+    if(EXISTS "${MARIADB_ROOT}/lib/libmariadb.dll")
+        set(MARIADB_DLL "${MARIADB_ROOT}/lib/libmariadb.dll")
+    elseif(EXISTS "${MARIADB_ROOT}/lib/libmysql.dll")
+        set(MARIADB_DLL "${MARIADB_ROOT}/lib/libmysql.dll")
+    endif()
+    
+    if(MARIADB_DLL)
+        install(FILES "${MARIADB_DLL}" DESTINATION "${BIN_DIR}" COMPONENT runtime)
+        message(STATUS "MariaDB DLL will be auto-copied to install folder: ${MARIADB_DLL}")
+    else()
+        message(WARNING "MariaDB DLL not found in ${MARIADB_ROOT}/lib/. You may need to copy it manually.")
+    endif()
+endif()
 
 include(${CMAKE_SOURCE_DIR}/cmake/StatusInfo.cmake)

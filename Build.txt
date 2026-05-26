@@ -1,0 +1,8 @@
+cd /d "D:\MangosCata\build"
+cmake .. -G "Visual Studio 17 2022" -A x64 -DPLAYERBOTS=ON -DSCRIPT_LIB_ELUNA=ON -DSCRIPT_LIB_SD3=ON
+cmake --build . --config Release --target INSTALL
+
+cd /d "D:\MangosCata\build"
+cmake .. -G "Visual Studio 17 2022" -A x64 -DPLAYERBOTS=OFF -DSCRIPT_LIB_ELUNA=ON -DSCRIPT_LIB_SD3=ON
+cmake --build . --config Release --target INSTALL
+
